@@ -65,11 +65,17 @@ glfw_init :: proc(
 		return
 	}
 
-	// Request OpenGL 3.3 Core Profile
-	glfw.WindowHint(glfw.CONTEXT_VERSION_MAJOR, 3)
-	glfw.WindowHint(glfw.CONTEXT_VERSION_MINOR, 3)
-	glfw.WindowHint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
-	glfw.WindowHint(glfw.OPENGL_FORWARD_COMPAT, 1) // Required on macOS
+	// Configure graphics API context
+	when RENDER_BACKEND_NAME == "metal" {
+		// Don't create OpenGL context for Metal
+		glfw.WindowHint(glfw.CLIENT_API, glfw.NO_API)
+	} else {
+		// Request OpenGL 3.3 Core Profile
+		glfw.WindowHint(glfw.CONTEXT_VERSION_MAJOR, 3)
+		glfw.WindowHint(glfw.CONTEXT_VERSION_MINOR, 3)
+		glfw.WindowHint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
+		glfw.WindowHint(glfw.OPENGL_FORWARD_COMPAT, 1) // Required on macOS
+	}
 
 	// Set resizable based on window mode
 	resizable: i32 = init_options.window_mode == .Windowed_Resizable ? 1 : 0
@@ -88,8 +94,10 @@ glfw_init :: proc(
 		return
 	}
 
-	glfw.MakeContextCurrent(s.window)
-	glfw.SwapInterval(1) // Enable vsync
+	when RENDER_BACKEND_NAME != "metal" {
+		glfw.MakeContextCurrent(s.window)
+		glfw.SwapInterval(1) // Enable vsync
+	}
 
 	// Set up callbacks
 	glfw.SetWindowUserPointer(s.window, s)
