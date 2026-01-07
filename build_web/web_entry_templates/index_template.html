@@ -1,16 +1,177 @@
-<!DOCTYPE html>
-<html lang="en" style="height: 100%;">
-	<head>
-		<meta charset="UTF-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<title>Karl2D Web Build</title>
-	</head>
-	<body id="body" style="height: 100%; padding: 0; margin: 0; overflow: hidden; background-color: black;">
-		<canvas id="webgl-canvas" oncontextmenu="return false;" onmousedown="event.target.focus()" onkeydown="event.preventDefault()"></canvas>
-	
-		<script type="text/javascript" src="odin.js"></script>
-		<script type="text/javascript">
-			odin.runWasm("main.wasm", null);
-		</script>
-	</body>
+<!doctype html>
+<html lang="en" style="height: 100%">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Karl2D Web Build</title>
+    </head>
+    <body
+        id="body"
+        style="
+            height: 100%;
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
+            background-color: black;
+        "
+    >
+        <canvas
+            id="webgl-canvas"
+            oncontextmenu="return false;"
+            onmousedown="event.target.focus()"
+            onkeydown="event.preventDefault()"
+        ></canvas>
+
+        <script type="text/javascript" src="odin.js"></script>
+        <script type="text/javascript" src="audio.js"></script>
+        <script type="text/javascript">
+            // We need to access WASM memory, but it's not available until after
+            // instantiation. We'll create a wrapper that gets the memory lazily
+            // from the exports.
+            let wasmExports = null
+
+            function getWasmMemory() {
+                if (wasmExports && wasmExports.memory) {
+                    return wasmExports.memory.buffer
+                }
+                return null
+            }
+
+            // Create the audio imports that bridge Odin foreign calls to JavaScript
+            const karl2dAudioImports = {
+                karl2d_audio: {
+                    _wa_init: () => {
+                        return karl2dAudio.init() ? 1 : 0
+                    },
+                    _wa_shutdown: () => {
+                        karl2dAudio.shutdown()
+                    },
+                    _wa_load_sound: (dataPtr, dataLen) => {
+                        const memory = getWasmMemory()
+                        if (!memory) {
+                            console.error("WASM memory not available")
+                            return 0
+                        }
+                        const data = new Uint8Array(memory, dataPtr, dataLen)
+                        // Make a copy since decodeAudioData may detach the buffer
+                        const dataCopy = new Uint8Array(data)
+                        // Note: loadSound is async but we need to return synchronously
+                        // We'll return a handle immediately and decode in background
+                        const handle = karl2dAudio.nextSoundHandle++
+                        karl2dAudio
+                            .decodeAudioData(dataCopy)
+                            .then((audioBuffer) => {
+                                if (audioBuffer) {
+                                    karl2dAudio.loadedSounds.set(
+                                        handle,
+                                        audioBuffer,
+                                    )
+                                }
+                            })
+                        return handle
+                    },
+                    _wa_destroy_sound: (handle) => {
+                        karl2dAudio.destroySound(handle)
+                    },
+                    _wa_play_sound: (handle) => {
+                        return karl2dAudio.playSound(handle) ? 1 : 0
+                    },
+                    _wa_play_music_from_bytes: (
+                        dataPtr,
+                        dataLen,
+                        loop,
+                        delaySeconds,
+                    ) => {
+                        const memory = getWasmMemory()
+                        if (!memory) {
+                            console.error("WASM memory not available")
+                            return 0
+                        }
+                        const data = new Uint8Array(memory, dataPtr, dataLen)
+                        // Make a copy since decodeAudioData may detach the buffer
+                        const dataCopy = new Uint8Array(data)
+                        karl2dAudio.playMusic(
+                            dataCopy,
+                            loop !== 0,
+                            delaySeconds,
+                        )
+                        return 1 // Return true, actual playback is async
+                    },
+                    _wa_stop_music: () => {
+                        karl2dAudio.stopMusic()
+                    },
+                    _wa_is_music_playing: () => {
+                        return karl2dAudio.isMusicPlaying() ? 1 : 0
+                    },
+                    _wa_set_master_volume: (volume) => {
+                        karl2dAudio.setMasterVolume(volume)
+                    },
+                    _wa_set_sound_volume: (volume) => {
+                        karl2dAudio.setSoundVolume(volume)
+                    },
+                    _wa_set_music_volume: (volume) => {
+                        karl2dAudio.setMusicVolume(volume)
+                    },
+                },
+            }
+
+            // Custom runWasm that captures exports for memory access
+            async function runKarl2dWasm(wasmPath) {
+                const wasmMemoryInterface = new odin.WasmMemoryInterface()
+                wasmMemoryInterface.setIntSize(4)
+
+                let imports = odin.setupDefaultImports(
+                    wasmMemoryInterface,
+                    null,
+                    wasmMemoryInterface.memory,
+                )
+
+                imports = {
+                    ...imports,
+                    ...karl2dAudioImports,
+                }
+
+                const response = await fetch(wasmPath)
+                const file = await response.arrayBuffer()
+                const wasm = await WebAssembly.instantiate(file, imports)
+                wasmExports = wasm.instance.exports
+                wasmMemoryInterface.setExports(wasmExports)
+
+                if (wasmExports.memory) {
+                    wasmMemoryInterface.setMemory(wasmExports.memory)
+                }
+
+                if (wasmExports._start) {
+                    wasmExports._start()
+                }
+
+                if (wasmExports.step) {
+                    const odin_ctx = wasmExports.default_context_ptr()
+
+                    let prevTimeStamp = undefined
+                    function step(currTimeStamp) {
+                        if (prevTimeStamp == undefined) {
+                            prevTimeStamp = currTimeStamp
+                        }
+
+                        const dt = (currTimeStamp - prevTimeStamp) * 0.001
+                        prevTimeStamp = currTimeStamp
+
+                        if (!wasmExports.step(dt, odin_ctx)) {
+                            if (wasmExports._end) {
+                                wasmExports._end()
+                            }
+                            return
+                        }
+
+                        window.requestAnimationFrame(step)
+                    }
+
+                    window.requestAnimationFrame(step)
+                }
+            }
+
+            runKarl2dWasm("main.wasm")
+        </script>
+    </body>
 </html>

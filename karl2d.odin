@@ -95,6 +95,18 @@ init :: proc(
 	s.default_shader = load_shader_from_bytes(rb.default_shader_vertex_source(), rb.default_shader_fragment_source())
 	s.batch_shader = s.default_shader
 
+	// Initialize the audio backend
+	s.audio = AUDIO
+	ab = s.audio
+	ab_alloc_error: runtime.Allocator_Error
+	s.audio_state, ab_alloc_error = mem.alloc(ab.state_size(), allocator = allocator)
+	log.assertf(
+			ab_alloc_error == nil,
+			"Failed allocating memory for audio backend: %v",
+			ab_alloc_error,
+	)
+	ab.init(s.audio_state)
+	
 	// FontStash enables us to bake fonts from TTF files on-the-fly.
 	fs.Init(&s.fs, FONT_DEFAULT_ATLAS_SIZE, FONT_DEFAULT_ATLAS_SIZE, .TOPLEFT)
 	fs.SetAlignVertical(&s.fs, .TOP)
@@ -138,6 +150,7 @@ update :: proc() -> bool {
 	reset_frame_allocator()
 	calculate_frame_time()
 	process_events()
+	ab.update()
 	return !close_window_requested()
 }
 
@@ -161,12 +174,14 @@ shutdown :: proc() {
 	rb.shutdown()
 	delete(s.vertex_buffer_cpu, s.allocator)
 
+	ab.shutdown()
 	win.shutdown()
 
 	fs.Destroy(&s.fs)
 	delete(s.fonts)
 
 	a := s.allocator
+	free(s.audio_state, a)
 	free(s.window_state, a)
 	free(s.rb_state, a)
 	free(s, a)
@@ -1189,6 +1204,83 @@ get_default_font :: proc() -> Font {
 }
 
 
+//-------//
+// AUDIO //
+//-------//
+
+// Sound handle - represents a loaded sound effect ready for playback.
+// Similar to Texture, you load it once and can play it many times.
+Sound :: struct {
+	handle: Sound_Handle,
+}
+
+// Load a sound effect from a file. Returns a Sound that can be played multiple times.
+// The audio is decoded once at load time for efficient playback.
+load_sound :: proc(path: string) -> Sound {
+	return {handle = ab.load_sound(path)}
+}
+
+// Load a sound effect from raw bytes (e.g. from #load). Returns a Sound that can be played
+// multiple times. The audio is decoded once at load time for efficient playback.
+// Especially useful for web/WASM builds where file system access is limited.
+load_sound_from_bytes :: proc(data: []u8) -> Sound {
+	return {handle = ab.load_sound_from_bytes(data)}
+}
+
+// Destroy a loaded sound and free its resources.
+destroy_sound :: proc(sound: Sound) {
+	ab.destroy_sound(sound.handle)
+}
+
+// Play a loaded sound effect. The sound is "fire and forget" - it will play through
+// the sound group and cannot be individually stopped. The same Sound can be played
+// multiple times, even overlapping.
+play_sound :: proc(sound: Sound) -> bool {
+	return ab.play_sound(sound.handle)
+}
+
+// Play music. Only one music track can play at a time. Calling this while music is already
+// playing will stop the current music and start the new track.
+// `loop` controls whether the music loops when it reaches the end.
+// `delay_seconds` optionally delays the start of the music.
+play_music :: proc(path: string, loop := true, delay_seconds: f32 = 0) -> bool {
+	return ab.play_music(path, loop, delay_seconds)
+}
+
+// Play music from raw bytes (e.g. from #load). Only one music track can play at a time.
+// Calling this while music is already playing will stop the current music and start the new track.
+// `loop` controls whether the music loops when it reaches the end.
+// `delay_seconds` optionally delays the start of the music.
+// Especially useful for web/WASM builds where file system access is limited.
+play_music_from_bytes :: proc(data: []u8, loop := true, delay_seconds: f32 = 0) -> bool {
+	return ab.play_music_from_bytes(data, loop, delay_seconds)
+}
+
+// Stop the currently playing music.
+stop_music :: proc() {
+	ab.stop_music()
+}
+
+// Returns true if music is currently playing.
+is_music_playing :: proc() -> bool {
+	return ab.is_music_playing()
+}
+
+// Set the master volume (affects all audio). Volume should be between 0.0 and 1.0.
+set_master_volume :: proc(volume: f32) {
+	ab.set_master_volume(volume)
+}
+
+// Set the volume for sound effects. Volume should be between 0.0 and 1.0.
+set_sound_volume :: proc(volume: f32) {
+	ab.set_sound_volume(volume)
+}
+
+// Set the volume for music. Volume should be between 0.0 and 1.0.
+set_music_volume :: proc(volume: f32) {
+	ab.set_music_volume(volume)
+}
+
 //---------//
 // SHADERS //
 //---------//
@@ -1818,6 +1910,8 @@ State :: struct {
 	window_state: rawptr,
 	rb: Render_Backend_Interface,
 	rb_state: rawptr,
+	audio: Audio_Interface,
+	audio_state: rawptr,
 
 	fs: fs.FontContext,
 	
@@ -2095,6 +2189,7 @@ s: ^State
 frame_allocator: runtime.Allocator
 win: Window_Interface
 rb: Render_Backend_Interface
+ab: Audio_Interface
 
 get_shader_input_default_type :: proc(name: string, type: Shader_Input_Type) -> Shader_Default_Inputs {
 	if name == "position" && type == .Vec2 {
