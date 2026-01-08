@@ -1266,6 +1266,16 @@ is_music_playing :: proc() -> bool {
 	return ab.is_music_playing()
 }
 
+// Pause the currently playing music. Use resume_music to continue playback.
+pause_music :: proc() {
+	ab.pause_music()
+}
+
+// Resume music playback after pausing.
+resume_music :: proc() {
+	ab.resume_music()
+}
+
 // Set the master volume (affects all audio). Volume should be between 0.0 and 1.0.
 set_master_volume :: proc(volume: f32) {
 	ab.set_master_volume(volume)
@@ -1279,6 +1289,12 @@ set_sound_volume :: proc(volume: f32) {
 // Set the volume for music. Volume should be between 0.0 and 1.0.
 set_music_volume :: proc(volume: f32) {
 	ab.set_music_volume(volume)
+}
+
+// Set the stereo pan for music. Pan should be between -1.0 (full left) and 1.0 (full right).
+// A value of 0.0 is center (default).
+set_music_pan :: proc(pan: f32) {
+	ab.set_music_pan(pan)
 }
 
 //---------//

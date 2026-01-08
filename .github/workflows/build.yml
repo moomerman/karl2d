@@ -24,8 +24,11 @@ jobs:
 
       - name: Install lld (macOS)
         if: matrix.os == 'macos-latest'
-        run: |
-          brew install lld
+        run: brew install lld
+
+      - name: Build miniaudio (macOS)
+        if: matrix.os == 'macos-latest'
+        run: make -C "$HOME/odin/vendor/miniaudio/src"
 
       - uses: actions/checkout@v4
 

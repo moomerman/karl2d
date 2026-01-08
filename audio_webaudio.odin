@@ -20,9 +20,12 @@ AUDIO_WEBAUDIO :: Audio_Interface {
 	play_music_from_bytes = wa_play_music_from_bytes,
 	stop_music            = wa_stop_music,
 	is_music_playing      = wa_is_music_playing,
+	pause_music           = wa_pause_music,
+	resume_music          = wa_resume_music,
 	set_master_volume     = wa_set_master_volume,
 	set_sound_volume      = wa_set_sound_volume,
 	set_music_volume      = wa_set_music_volume,
+	set_music_pan         = wa_set_music_pan,
 	set_internal_state    = wa_set_internal_state,
 }
 
@@ -39,9 +42,12 @@ foreign karl2d_audio {
 	_wa_play_music_from_bytes :: proc(data: [^]u8, len: int, loop: bool, delay_seconds: f32) -> bool ---
 	_wa_stop_music :: proc() ---
 	_wa_is_music_playing :: proc() -> bool ---
+	_wa_pause_music :: proc() ---
+	_wa_resume_music :: proc() ---
 	_wa_set_master_volume :: proc(volume: f32) ---
 	_wa_set_sound_volume :: proc(volume: f32) ---
 	_wa_set_music_volume :: proc(volume: f32) ---
+	_wa_set_music_pan :: proc(pan: f32) ---
 }
 
 Webaudio_State :: struct {
@@ -155,6 +161,16 @@ wa_is_music_playing :: proc() -> bool {
 	return _wa_is_music_playing()
 }
 
+wa_pause_music :: proc() {
+	if wa_state == nil || !wa_state.initialized do return
+	_wa_pause_music()
+}
+
+wa_resume_music :: proc() {
+	if wa_state == nil || !wa_state.initialized do return
+	_wa_resume_music()
+}
+
 wa_set_master_volume :: proc(volume: f32) {
 	if wa_state == nil || !wa_state.initialized do return
 	clamped := clamp(volume, 0.0, 1.0)
@@ -171,6 +187,12 @@ wa_set_music_volume :: proc(volume: f32) {
 	if wa_state == nil || !wa_state.initialized do return
 	clamped := clamp(volume, 0.0, 1.0)
 	_wa_set_music_volume(clamped)
+}
+
+wa_set_music_pan :: proc(pan: f32) {
+	if wa_state == nil || !wa_state.initialized do return
+	clamped := clamp(pan, -1.0, 1.0)
+	_wa_set_music_pan(clamped)
 }
 
 wa_set_internal_state :: proc(state: rawptr) {

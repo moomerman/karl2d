@@ -6,6 +6,7 @@ const karl2dAudio = {
   masterGain: null,
   soundGain: null,
   musicGain: null,
+  musicPanner: null,
   currentMusic: null,
   currentMusicSource: null,
   initialized: false,
@@ -29,8 +30,12 @@ const karl2dAudio = {
       this.soundGain = this.audioContext.createGain()
       this.soundGain.connect(this.masterGain)
 
+      // Create panner node for music stereo panning
+      this.musicPanner = this.audioContext.createStereoPanner()
+      this.musicPanner.connect(this.masterGain)
+
       this.musicGain = this.audioContext.createGain()
-      this.musicGain.connect(this.masterGain)
+      this.musicGain.connect(this.musicPanner)
 
       this.initialized = true
 
@@ -220,6 +225,24 @@ const karl2dAudio = {
   setMusicVolume: function (volume) {
     if (!this.initialized || !this.musicGain) return
     this.musicGain.gain.value = Math.max(0, Math.min(1, volume))
+  },
+
+  // Set music stereo pan (-1.0 = left, 0.0 = center, 1.0 = right)
+  setMusicPan: function (pan) {
+    if (!this.initialized || !this.musicPanner) return
+    this.musicPanner.pan.value = Math.max(-1, Math.min(1, pan))
+  },
+
+  // Pause music playback
+  pauseMusic: function () {
+    if (!this.initialized || !this.audioContext) return
+    this.audioContext.suspend()
+  },
+
+  // Resume music playback
+  resumeMusic: function () {
+    if (!this.initialized || !this.audioContext) return
+    this.audioContext.resume()
   },
 }
 

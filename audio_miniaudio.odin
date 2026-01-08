@@ -24,9 +24,12 @@ AUDIO_MINIAUDIO :: Audio_Interface {
 	play_music_from_bytes = ma_play_music_from_bytes,
 	stop_music            = ma_stop_music,
 	is_music_playing      = ma_is_music_playing,
+	pause_music           = ma_pause_music,
+	resume_music          = ma_resume_music,
 	set_master_volume     = ma_set_master_volume,
 	set_sound_volume      = ma_set_sound_volume,
 	set_music_volume      = ma_set_music_volume,
+	set_music_pan         = ma_set_music_pan,
 	set_internal_state    = ma_set_internal_state,
 }
 
@@ -572,6 +575,30 @@ ma_is_music_playing :: proc() -> bool {
 	return false
 }
 
+ma_pause_music :: proc() {
+	if ma_state == nil do return
+
+	if ma_state.music != nil {
+		miniaudio.sound_stop(ma_state.music)
+	}
+
+	if ma_state.music_mem != nil {
+		miniaudio.sound_stop(&ma_state.music_mem.sound)
+	}
+}
+
+ma_resume_music :: proc() {
+	if ma_state == nil do return
+
+	if ma_state.music != nil {
+		miniaudio.sound_start(ma_state.music)
+	}
+
+	if ma_state.music_mem != nil {
+		miniaudio.sound_start(&ma_state.music_mem.sound)
+	}
+}
+
 ma_set_master_volume :: proc(volume: f32) {
 	if ma_state == nil do return
 	clamped := clamp(volume, 0.0, 1.0)
@@ -597,6 +624,19 @@ ma_set_music_volume :: proc(volume: f32) {
 
 	if ma_state.music_mem != nil {
 		miniaudio.sound_set_volume(&ma_state.music_mem.sound, clamped)
+	}
+}
+
+ma_set_music_pan :: proc(pan: f32) {
+	if ma_state == nil do return
+	clamped := clamp(pan, -1.0, 1.0)
+
+	if ma_state.music != nil {
+		miniaudio.sound_set_pan(ma_state.music, clamped)
+	}
+
+	if ma_state.music_mem != nil {
+		miniaudio.sound_set_pan(&ma_state.music_mem.sound, clamped)
 	}
 }
 

@@ -373,6 +373,71 @@ destroy_font :: proc(font: Font)
 // Returns the built-in font of Karl2D (the font is known as "roboto")
 get_default_font :: proc() -> Font
 
+//-------//
+// AUDIO //
+//-------//
+
+// Sound handle - represents a loaded sound effect ready for playback.
+// Similar to Texture, you load it once and can play it many times.
+Sound :: struct {
+	handle: Sound_Handle,
+}
+
+// Load a sound effect from a file. Returns a Sound that can be played multiple times.
+// The audio is decoded once at load time for efficient playback.
+load_sound :: proc(path: string) -> Sound
+
+// Load a sound effect from raw bytes (e.g. from #load). Returns a Sound that can be played
+// multiple times. The audio is decoded once at load time for efficient playback.
+// Especially useful for web/WASM builds where file system access is limited.
+load_sound_from_bytes :: proc(data: []u8) -> Sound
+
+// Destroy a loaded sound and free its resources.
+destroy_sound :: proc(sound: Sound)
+
+// Play a loaded sound effect. The sound is "fire and forget" - it will play through
+// the sound group and cannot be individually stopped. The same Sound can be played
+// multiple times, even overlapping.
+play_sound :: proc(sound: Sound) -> bool
+
+// Play music. Only one music track can play at a time. Calling this while music is already
+// playing will stop the current music and start the new track.
+// `loop` controls whether the music loops when it reaches the end.
+// `delay_seconds` optionally delays the start of the music.
+play_music :: proc(path: string, loop := true, delay_seconds: f32 = 0) -> bool
+
+// Play music from raw bytes (e.g. from #load). Only one music track can play at a time.
+// Calling this while music is already playing will stop the current music and start the new track.
+// `loop` controls whether the music loops when it reaches the end.
+// `delay_seconds` optionally delays the start of the music.
+// Especially useful for web/WASM builds where file system access is limited.
+play_music_from_bytes :: proc(data: []u8, loop := true, delay_seconds: f32 = 0) -> bool
+
+// Stop the currently playing music.
+stop_music :: proc()
+
+// Returns true if music is currently playing.
+is_music_playing :: proc() -> bool
+
+// Pause the currently playing music. Use resume_music to continue playback.
+pause_music :: proc()
+
+// Resume music playback after pausing.
+resume_music :: proc()
+
+// Set the master volume (affects all audio). Volume should be between 0.0 and 1.0.
+set_master_volume :: proc(volume: f32)
+
+// Set the volume for sound effects. Volume should be between 0.0 and 1.0.
+set_sound_volume :: proc(volume: f32)
+
+// Set the volume for music. Volume should be between 0.0 and 1.0.
+set_music_volume :: proc(volume: f32)
+
+// Set the stereo pan for music. Pan should be between -1.0 (full left) and 1.0 (full right).
+// A value of 0.0 is center (default).
+set_music_pan :: proc(pan: f32)
+
 //---------//
 // SHADERS //
 //---------//
@@ -750,6 +815,8 @@ State :: struct {
 	window_state: rawptr,
 	rb: Render_Backend_Interface,
 	rb_state: rawptr,
+	audio: Audio_Interface,
+	audio_state: rawptr,
 
 	fs: fs.FontContext,
 	

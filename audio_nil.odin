@@ -18,9 +18,12 @@ AUDIO_NIL :: Audio_Interface {
 	play_music_from_bytes = abnil_play_music_from_bytes,
 	stop_music            = abnil_stop_music,
 	is_music_playing      = abnil_is_music_playing,
+	pause_music           = abnil_pause_music,
+	resume_music          = abnil_resume_music,
 	set_master_volume     = abnil_set_master_volume,
 	set_sound_volume      = abnil_set_sound_volume,
 	set_music_volume      = abnil_set_music_volume,
+	set_music_pan         = abnil_set_music_pan,
 	set_internal_state    = abnil_set_internal_state,
 }
 
@@ -70,6 +73,12 @@ abnil_is_music_playing :: proc() -> bool {
 	return false
 }
 
+abnil_pause_music :: proc() {
+}
+
+abnil_resume_music :: proc() {
+}
+
 abnil_set_master_volume :: proc(volume: f32) {
 }
 
@@ -77,6 +86,9 @@ abnil_set_sound_volume :: proc(volume: f32) {
 }
 
 abnil_set_music_volume :: proc(volume: f32) {
+}
+
+abnil_set_music_pan :: proc(pan: f32) {
 }
 
 abnil_set_internal_state :: proc(state: rawptr) {

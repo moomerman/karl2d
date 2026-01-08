@@ -103,6 +103,12 @@
                     _wa_is_music_playing: () => {
                         return karl2dAudio.isMusicPlaying() ? 1 : 0
                     },
+                    _wa_pause_music: () => {
+                        karl2dAudio.pauseMusic()
+                    },
+                    _wa_resume_music: () => {
+                        karl2dAudio.resumeMusic()
+                    },
                     _wa_set_master_volume: (volume) => {
                         karl2dAudio.setMasterVolume(volume)
                     },
@@ -111,6 +117,9 @@
                     },
                     _wa_set_music_volume: (volume) => {
                         karl2dAudio.setMusicVolume(volume)
+                    },
+                    _wa_set_music_pan: (pan) => {
+                        karl2dAudio.setMusicPan(pan)
                     },
                 },
             }

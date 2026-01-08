@@ -19,10 +19,13 @@ Audio_Interface :: struct #all_or_none {
 	play_music_from_bytes: proc(data: []u8, loop: bool, delay_seconds: f32) -> bool,
 	stop_music:            proc(),
 	is_music_playing:      proc() -> bool,
+	pause_music:           proc(),
+	resume_music:          proc(),
 
-	// Volume controls
+	// Volume and pan controls
 	set_master_volume:     proc(volume: f32),
 	set_sound_volume:      proc(volume: f32),
 	set_music_volume:      proc(volume: f32),
+	set_music_pan:         proc(pan: f32), // -1.0 = left, 0.0 = center, 1.0
 	set_internal_state:    proc(state: rawptr),
 }

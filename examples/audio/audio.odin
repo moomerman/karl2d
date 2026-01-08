@@ -28,8 +28,8 @@ master_volume: f32 = 0.5
 music_volume: f32 = 0.5
 sound_volume: f32 = 0.5
 
-// Track if music should be playing
-music_enabled: bool = true
+pan: f32 = 0.0
+pause: bool
 
 main :: proc() {
 	init()
@@ -43,6 +43,7 @@ init :: proc() {
 	k2.set_master_volume(master_volume)
 	k2.set_music_volume(music_volume)
 	k2.set_sound_volume(sound_volume)
+	k2.set_music_pan(pan)
 
 	splat_sound = k2.load_sound_from_bytes(SOUND_EFFECT)
 
@@ -59,12 +60,17 @@ step :: proc() -> bool {
 	}
 
 	if k2.key_went_down(.M) {
-		music_enabled = !music_enabled
-		if music_enabled {
-			k2.play_music_from_bytes(BACKGROUND_MUSIC, loop = true)
+		pause = !pause
+		if pause {
+			k2.pause_music()
 		} else {
-			k2.stop_music()
+			k2.resume_music()
 		}
+	}
+
+	if k2.key_went_down(.R) {
+		k2.stop_music()
+		k2.play_music_from_bytes(BACKGROUND_MUSIC, loop = true)
 	}
 
 	// Master volume: Up/Down
@@ -97,6 +103,16 @@ step :: proc() -> bool {
 		k2.set_sound_volume(sound_volume)
 	}
 
+	// Pan: A/D
+	if k2.key_went_down(.A) {
+		pan = max(pan - 0.05, -1.0)
+		k2.set_music_pan(pan)
+	}
+	if k2.key_went_down(.D) {
+		pan = min(pan + 0.05, 1.0)
+		k2.set_music_pan(pan)
+	}
+
 	// Draw
 	k2.clear(k2.LIGHT_BLUE)
 
@@ -106,28 +122,31 @@ step :: proc() -> bool {
 	k2.draw_text("Controls:", {50, 120}, 24, k2.DARK_BLUE)
 	k2.draw_text("SPACE - Play sound effect", {70, 150}, 20, k2.DARK_GRAY)
 	k2.draw_text("M - Toggle music on/off", {70, 175}, 20, k2.DARK_GRAY)
-	k2.draw_text("Up/Down - Master volume", {70, 200}, 20, k2.DARK_GRAY)
-	k2.draw_text("Left/Right - Music volume", {70, 225}, 20, k2.DARK_GRAY)
-	k2.draw_text("Q/E - Sound volume", {70, 250}, 20, k2.DARK_GRAY)
+	k2.draw_text("R - Restart music", {70, 200}, 20, k2.DARK_GRAY)
+	k2.draw_text("Up/Down - Master volume", {70, 225}, 20, k2.DARK_GRAY)
+	k2.draw_text("Left/Right - Music volume", {70, 250}, 20, k2.DARK_GRAY)
+	k2.draw_text("Q/E - Sound volume", {70, 275}, 20, k2.DARK_GRAY)
+	k2.draw_text("A/D - Left/Right Pan control", {70, 300}, 20, k2.DARK_GRAY)
 
 	// Volume displays using simple bars
-	y: f32 = 300
+	y: f32 = 350
 	draw_volume_bar("Master:", master_volume, {50, y})
 	draw_volume_bar("Music: ", music_volume, {50, y + 35})
 	draw_volume_bar("Sound: ", sound_volume, {50, y + 70})
+	draw_volume_bar("Pan: ", (pan + 1.0) / 2.0, {50, y + 105})
 
 	// Music status
 	if k2.is_music_playing() {
-		k2.draw_text("Music: Playing", {50, 420}, 24, k2.DARK_GREEN)
+		k2.draw_text("Music: Playing", {50, 500}, 24, k2.DARK_GREEN)
 	} else {
-		k2.draw_text("Music: Stopped", {50, 420}, 24, k2.ORANGE)
+		k2.draw_text("Music: Stopped", {50, 500}, 24, k2.ORANGE)
 	}
 
 	// Browser autoplay notice (web only)
 	when !k2.FILESYSTEM_SUPPORTED {
 		k2.draw_text(
 			"Click anywhere if audio doesn't start (browser autoplay policy)",
-			{50, 460},
+			{50, 540},
 			18,
 			k2.GRAY,
 		)
