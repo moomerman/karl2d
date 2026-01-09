@@ -5,9 +5,12 @@ CONFIG_RENDER_BACKEND_NAME :: #config(KARL2D_RENDER_BACKEND, "")
 when ODIN_OS == .Windows {
 	DEFAULT_RENDER_BACKEND_NAME :: "d3d11"
 	AVAILABLE_RENDER_BACKENDS :: "d3d11, gl"
-} else when ODIN_OS == .Linux || ODIN_OS == .Darwin {
+} else when ODIN_OS == .Linux {
 	DEFAULT_RENDER_BACKEND_NAME :: "gl"
 	AVAILABLE_RENDER_BACKENDS :: "gl"
+} else when ODIN_OS == .Darwin {
+	DEFAULT_RENDER_BACKEND_NAME :: "gl" // metal is experimental
+	AVAILABLE_RENDER_BACKENDS :: "metal, gl"
 } else when ODIN_OS == .JS {
 	DEFAULT_RENDER_BACKEND_NAME :: "webgl"
 	AVAILABLE_RENDER_BACKENDS :: "webgl"
@@ -28,8 +31,17 @@ when RENDER_BACKEND_NAME == "gl" {
 	RENDER_BACKEND :: RENDER_BACKEND_D3D11
 } else when RENDER_BACKEND_NAME == "webgl" {
 	RENDER_BACKEND :: RENDER_BACKEND_WEBGL
+} else when RENDER_BACKEND_NAME == "metal" {
+	RENDER_BACKEND :: RENDER_BACKEND_METAL
 } else when RENDER_BACKEND_NAME == "nil" {
 	RENDER_BACKEND :: RENDER_BACKEND_NIL
 } else {
-	#panic("'" + RENDER_BACKEND_NAME + "' is not a valid value for 'KARL2D_RENDER_BACKEND' on Operating System " + ODIN_OS_STRING + ". Available backends are: " + AVAILABLE_RENDER_BACKENDS)
+	#panic(
+		"'" +
+		RENDER_BACKEND_NAME +
+		"' is not a valid value for 'KARL2D_RENDER_BACKEND' on Operating System " +
+		ODIN_OS_STRING +
+		". Available backends are: " +
+		AVAILABLE_RENDER_BACKENDS,
+	)
 }
