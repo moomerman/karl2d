@@ -1,7 +1,7 @@
 // This program builds a Karl2D game as a web version.
 //
 // Usage:
-//    odin run build_web -- directory_name 
+//    odin run build_web -- directory_name
 //
 // For example:
 //    odin run build_web -- examples/minimal_web
@@ -49,6 +49,7 @@ main :: proc() {
 
 	WEB_ENTRY_TEMPLATE :: #load("web_entry_templates/web_entry_template.odin")
 	WEB_ENTRY_INDEX :: #load("web_entry_templates/index_template.html")
+	WEB_AUDIO_JS :: #load("web_entry_templates/audio.js")
 
 	dir_handle, dir_handle_err := os.open(dir)
 	fmt.ensuref(dir_handle_err == nil, "Failed finding directory %v. Error: %v", dir, dir_handle_err)
@@ -76,6 +77,10 @@ main :: proc() {
 	entry_html_file_path := filepath.join({bin_web_dir, "index.html"})
 	write_entry_html_err := os.write_entire_file(entry_html_file_path, WEB_ENTRY_INDEX)
 	fmt.ensuref(write_entry_html_err == nil, "Failed writing %v. Error: %v", entry_html_file_path, write_entry_html_err)
+
+	audio_js_file_path := filepath.join({bin_web_dir, "audio.js"})
+	write_audio_js_err := os.write_entire_file(audio_js_file_path, WEB_AUDIO_JS)
+	fmt.ensuref(write_audio_js_err == nil, "Failed writing %v. Error: %v", audio_js_file_path, write_audio_js_err)
 
 	_, odin_root_stdout, _, odin_root_err := os.process_exec({
 		command = { "odin", "root" },
