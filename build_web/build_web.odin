@@ -49,6 +49,7 @@ main :: proc() {
 
 	WEB_ENTRY_TEMPLATE :: #load("web_entry_templates/web_entry_template.odin")
 	WEB_ENTRY_INDEX :: #load("web_entry_templates/index_template.html")
+	AUDIO_JS :: #load("../audio.js")
 
 	dir_handle, dir_handle_err := os.open(dir)
 	fmt.ensuref(dir_handle_err == nil, "Failed finding directory %v. Error: %v", dir, dir_handle_err)
@@ -87,6 +88,11 @@ main :: proc() {
 	js_runtime_path := filepath.join({odin_root, "core", "sys", "wasm", "js", "odin.js"})
 	fmt.ensuref(os.exists(js_runtime_path), "File does not exist: %v -- It is the Odin Javascript runtime that this program needs to copy to the web build output folder!", js_runtime_path)
 	os.copy_file(filepath.join({bin_web_dir, "odin.js"}), js_runtime_path)
+
+	// Copy audio.js for web audio support
+	audio_js_path := filepath.join({bin_web_dir, "audio.js"})
+	write_audio_js_err := os.write_entire_file(audio_js_path, AUDIO_JS)
+	fmt.ensuref(write_audio_js_err == nil, "Failed writing %v. Error: %v", audio_js_path, write_audio_js_err)
 
 	wasm_out_path := filepath.join({bin_web_dir, "main.wasm"})
 
