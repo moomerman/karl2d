@@ -239,6 +239,42 @@ jobs:
       - name: camera (nil, debug)
         run: odin check examples/camera -vet -strict-style -debug -define:KARL2D_RENDER_BACKEND=nil
 
+      - name: audio_basic (gl)
+        run: odin check examples/audio_basic -vet -strict-style -define:KARL2D_RENDER_BACKEND=gl
+
+      - name: audio_basic (gl, debug)
+        run: odin check examples/audio_basic -vet -strict-style -debug -define:KARL2D_RENDER_BACKEND=gl
+
+      - name: audio_basic (gl)
+        run: odin check examples/audio_basic -vet -strict-style -define:KARL2D_RENDER_BACKEND=nil
+
+      - name: audio_basic (nil, debug)
+        run: odin check examples/audio_basic -vet -strict-style -debug -define:KARL2D_RENDER_BACKEND=nil
+
+      - name: audio_advanced
+        run: odin check examples/audio_advanced -vet -strict-style
+
+      - name: audio_advanced (debug)
+        run: odin check examples/audio_advanced -vet -strict-style -debug
+
+      - name: audio_advanced (gl)
+        run: odin check examples/audio_advanced -vet -strict-style -define:KARL2D_RENDER_BACKEND=gl
+
+      - name: audio_advanced (gl, debug)
+        run: odin check examples/audio_advanced -vet -strict-style -debug -define:KARL2D_RENDER_BACKEND=gl
+
+      - name: audio_advanced (gl)
+        run: odin check examples/audio_advanced -vet -strict-style -define:KARL2D_RENDER_BACKEND=nil
+
+      - name: audio_advanced (nil, debug)
+        run: odin check examples/audio_advanced -vet -strict-style -debug -define:KARL2D_RENDER_BACKEND=nil
+
+      - name: audio_advanced (web)
+        run: odin run build_web -vet -strict-style -- examples/audio_advanced
+
+      - name: audio_advanced (web, debug)
+        run: odin run build_web -vet -strict-style -- examples/audio_advanced -debug
+
       - name: raylib_ports/shaders_texture_waves
         run: odin check examples/raylib_ports/shaders_texture_waves -vet -strict-style
 
