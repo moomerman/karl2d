@@ -27,6 +27,10 @@ jobs:
         if: matrix.os == 'macos-latest'
         run: brew install lld
 
+      - name: Build miniaudio (macos)
+        if: matrix.os == 'macos-latest'
+        run: make -C "$HOME/odin/vendor/miniaudio/src"
+
       - name: Install lld (ubuntu)
         if: matrix.os == 'ubuntu-latest'
         run: sudo apt-get update && sudo apt-get install -y lld
@@ -39,10 +43,50 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: $HOME/odin/vendor/box2d/build_box2d.sh
 
+      - name: Build miniaudio (ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: make -C "$HOME/odin/vendor/miniaudio/src"
+
       - uses: actions/checkout@v4
 
       - name: test_all_examples
         run: odin run tools/test_examples
+
+      - name: audio_basic (gl)
+        run: odin check examples/audio_basic -vet -strict-style -define:KARL2D_RENDER_BACKEND=gl
+
+      - name: audio_basic (gl, debug)
+        run: odin check examples/audio_basic -vet -strict-style -debug -define:KARL2D_RENDER_BACKEND=gl
+
+      - name: audio_basic (gl)
+        run: odin check examples/audio_basic -vet -strict-style -define:KARL2D_RENDER_BACKEND=nil
+
+      - name: audio_basic (nil, debug)
+        run: odin check examples/audio_basic -vet -strict-style -debug -define:KARL2D_RENDER_BACKEND=nil
+
+      - name: audio_advanced
+        run: odin check examples/audio_advanced -vet -strict-style
+
+      - name: audio_advanced (debug)
+        run: odin check examples/audio_advanced -vet -strict-style -debug
+
+      - name: audio_advanced (gl)
+        run: odin check examples/audio_advanced -vet -strict-style -define:KARL2D_RENDER_BACKEND=gl
+
+      - name: audio_advanced (gl, debug)
+        run: odin check examples/audio_advanced -vet -strict-style -debug -define:KARL2D_RENDER_BACKEND=gl
+
+      - name: audio_advanced (gl)
+        run: odin check examples/audio_advanced -vet -strict-style -define:KARL2D_RENDER_BACKEND=nil
+
+      - name: audio_advanced (nil, debug)
+        run: odin check examples/audio_advanced -vet -strict-style -debug -define:KARL2D_RENDER_BACKEND=nil
+
+      - name: audio_advanced (web)
+        run: odin run build_web -vet -strict-style -- examples/audio_advanced
+
+      - name: audio_advanced (web, debug)
+        run: odin run build_web -vet -strict-style -- examples/audio_advanced -debug
 
       - name: raylib_ports/shaders_texture_waves
         run: odin check examples/raylib_ports/shaders_texture_waves -no-threaded-checker -vet -strict-style

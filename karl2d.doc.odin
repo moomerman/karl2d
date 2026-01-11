@@ -480,6 +480,91 @@ get_camera_view_matrix :: proc(c: Camera) -> Mat4
 // Get the matrix that brings something in front of the camera.
 get_camera_world_matrix :: proc(c: Camera) -> Mat4
 
+//-------//
+// AUDIO //
+//-------//
+
+// Load an audio file from disk.
+// type: .Static for short sounds, .Stream for long music
+load_audio :: proc(path: string, type: Audio_Source_Type = .Static) -> Audio_Source
+
+// Load audio from raw bytes (e.g., embedded with #load).
+// type: .Static for short sounds, .Stream for long music
+load_audio_from_bytes :: proc(data: []u8, type: Audio_Source_Type = .Static) -> Audio_Source
+
+// Destroy an audio source and free its memory.
+destroy_audio :: proc(source: Audio_Source)
+
+// Get the duration of an audio source in seconds.
+get_audio_duration :: proc(source: Audio_Source) -> f32
+
+// Play an audio source with the given parameters.
+// Returns an instance handle for controlling playback.
+play_audio :: proc(source: Audio_Source, params: Audio_Play_Params = {}) -> Audio_Instance
+
+// Stop a playing audio instance.
+stop_audio :: proc(instance: Audio_Instance)
+
+// Pause a playing audio instance.
+pause_audio :: proc(instance: Audio_Instance)
+
+// Resume a paused audio instance.
+resume_audio :: proc(instance: Audio_Instance)
+
+// Stop all audio on a bus (or all audio if bus is AUDIO_BUS_NONE).
+stop_all_audio :: proc(bus: Audio_Bus = AUDIO_BUS_NONE)
+
+// Set the volume of a playing instance.
+set_audio_volume :: proc(instance: Audio_Instance, volume: f32)
+
+// Set the stereo pan of a playing instance.
+set_audio_pan :: proc(instance: Audio_Instance, pan: f32)
+
+// Set the pitch of a playing instance.
+set_audio_pitch :: proc(instance: Audio_Instance, pitch: f32)
+
+// Set whether a playing instance should loop.
+set_audio_looping :: proc(instance: Audio_Instance, loop: bool)
+
+// Set the position of a playing spatial audio instance.
+set_audio_position :: proc(instance: Audio_Instance, position: Vec2)
+
+// Check if an audio instance is currently playing.
+is_audio_playing :: proc(instance: Audio_Instance) -> bool
+
+// Check if an audio instance is paused.
+is_audio_paused :: proc(instance: Audio_Instance) -> bool
+
+// Get the current playback time of an instance in seconds.
+get_audio_time :: proc(instance: Audio_Instance) -> f32
+
+// Create a new audio bus for grouping sounds.
+create_audio_bus :: proc(name: string = "") -> Audio_Bus
+
+// Destroy an audio bus.
+destroy_audio_bus :: proc(bus: Audio_Bus)
+
+// Get the main (master) audio bus.
+get_main_audio_bus :: proc() -> Audio_Bus
+
+// Set the volume of a bus.
+set_audio_bus_volume :: proc(bus: Audio_Bus, volume: f32)
+
+// Get the volume of a bus.
+get_audio_bus_volume :: proc(bus: Audio_Bus) -> f32
+
+// Set whether a bus is muted.
+set_audio_bus_muted :: proc(bus: Audio_Bus, muted: bool)
+
+// Check if a bus is muted.
+is_audio_bus_muted :: proc(bus: Audio_Bus) -> bool
+
+// Set the listener position for spatial audio.
+set_audio_listener_position :: proc(position: Vec2)
+
+// Get the current listener position.
+get_audio_listener_position :: proc() -> Vec2
+
 //------//
 // MISC //
 //------//
@@ -768,6 +853,9 @@ State :: struct {
 	render_backend_state: rawptr,
 
 	fs: fs.FontContext,
+
+	ab: Audio_Interface,
+	ab_state: rawptr,
 	
 	close_window_requested: bool,
 

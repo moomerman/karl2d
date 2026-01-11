@@ -127,6 +127,18 @@ init :: proc(
 	s.default_font = load_font_from_bytes(DEFAULT_FONT_DATA)
 	_set_font(s.default_font)
 
+	// Initialize audio backend
+	s.ab = AUDIO_INTERFACE
+	ab_alloc_error: runtime.Allocator_Error
+	s.ab_state, ab_alloc_error = mem.alloc(s.ab.state_size(), allocator = allocator)
+	log.assertf(ab_alloc_error == nil, "Failed allocating memory for audio backend: %v", ab_alloc_error)
+
+	if !s.ab.init(s.ab_state, allocator) {
+		log.warnf("Audio initialization failed - audio will be disabled")
+	}
+
+	ab = s.ab
+
 	return s
 }
 
@@ -158,6 +170,7 @@ update :: proc() -> bool {
 	reset_frame_allocator()
 	calculate_frame_time()
 	process_events()
+	s.ab.update()
 	return !close_window_requested()
 }
 
@@ -185,6 +198,9 @@ shutdown :: proc() {
 
 	fs.Destroy(&s.fs)
 	delete(s.fonts)
+
+	s.ab.shutdown()
+	free(s.ab_state, s.allocator)
 
 	a := s.allocator
 	free(s.platform_state, a)
@@ -1604,6 +1620,147 @@ get_camera_world_matrix :: proc(c: Camera) -> Mat4 {
 	return target_translate * rot * scale * offset_translate
 }
 
+//-------//
+// AUDIO //
+//-------//
+
+// Load an audio file from disk.
+// type: .Static for short sounds, .Stream for long music
+load_audio :: proc(path: string, type: Audio_Source_Type = .Static) -> Audio_Source {
+	return ab.load_audio(path, type)
+}
+
+// Load audio from raw bytes (e.g., embedded with #load).
+// type: .Static for short sounds, .Stream for long music
+load_audio_from_bytes :: proc(data: []u8, type: Audio_Source_Type = .Static) -> Audio_Source {
+	return ab.load_audio_from_bytes(data, type)
+}
+
+// Destroy an audio source and free its memory.
+destroy_audio :: proc(source: Audio_Source) {
+	ab.destroy_audio(source)
+}
+
+// Get the duration of an audio source in seconds.
+get_audio_duration :: proc(source: Audio_Source) -> f32 {
+	return ab.get_audio_duration(source)
+}
+
+// Play an audio source with the given parameters.
+// Returns an instance handle for controlling playback.
+play_audio :: proc(source: Audio_Source, params: Audio_Play_Params = {}) -> Audio_Instance {
+	// Apply defaults for zero-valued fields
+	p := params
+	if p.volume == 0 do p.volume = 1.0
+	if p.pitch == 0 do p.pitch = 1.0
+	return ab.play_audio(source, p)
+}
+
+// Stop a playing audio instance.
+stop_audio :: proc(instance: Audio_Instance) {
+	ab.stop_audio(instance)
+}
+
+// Pause a playing audio instance.
+pause_audio :: proc(instance: Audio_Instance) {
+	ab.pause_audio(instance)
+}
+
+// Resume a paused audio instance.
+resume_audio :: proc(instance: Audio_Instance) {
+	ab.resume_audio(instance)
+}
+
+// Stop all audio on a bus (or all audio if bus is AUDIO_BUS_NONE).
+stop_all_audio :: proc(bus: Audio_Bus = AUDIO_BUS_NONE) {
+	ab.stop_all_audio(bus)
+}
+
+// Set the volume of a playing instance.
+set_audio_volume :: proc(instance: Audio_Instance, volume: f32) {
+	ab.set_audio_volume(instance, volume)
+}
+
+// Set the stereo pan of a playing instance.
+set_audio_pan :: proc(instance: Audio_Instance, pan: f32) {
+	ab.set_audio_pan(instance, pan)
+}
+
+// Set the pitch of a playing instance.
+set_audio_pitch :: proc(instance: Audio_Instance, pitch: f32) {
+	ab.set_audio_pitch(instance, pitch)
+}
+
+// Set whether a playing instance should loop.
+set_audio_looping :: proc(instance: Audio_Instance, loop: bool) {
+	ab.set_audio_looping(instance, loop)
+}
+
+// Set the position of a playing spatial audio instance.
+set_audio_position :: proc(instance: Audio_Instance, position: Vec2) {
+	ab.set_audio_position(instance, position)
+}
+
+// Check if an audio instance is currently playing.
+is_audio_playing :: proc(instance: Audio_Instance) -> bool {
+	return ab.is_audio_playing(instance)
+}
+
+// Check if an audio instance is paused.
+is_audio_paused :: proc(instance: Audio_Instance) -> bool {
+	return ab.is_audio_paused(instance)
+}
+
+// Get the current playback time of an instance in seconds.
+get_audio_time :: proc(instance: Audio_Instance) -> f32 {
+	return ab.get_audio_time(instance)
+}
+
+// Create a new audio bus for grouping sounds.
+create_audio_bus :: proc(name: string = "") -> Audio_Bus {
+	return ab.create_audio_bus(name)
+}
+
+// Destroy an audio bus.
+destroy_audio_bus :: proc(bus: Audio_Bus) {
+	ab.destroy_audio_bus(bus)
+}
+
+// Get the main (master) audio bus.
+get_main_audio_bus :: proc() -> Audio_Bus {
+	return ab.get_main_audio_bus()
+}
+
+// Set the volume of a bus.
+set_audio_bus_volume :: proc(bus: Audio_Bus, volume: f32) {
+	ab.set_audio_bus_volume(bus, volume)
+}
+
+// Get the volume of a bus.
+get_audio_bus_volume :: proc(bus: Audio_Bus) -> f32 {
+	return ab.get_audio_bus_volume(bus)
+}
+
+// Set whether a bus is muted.
+set_audio_bus_muted :: proc(bus: Audio_Bus, muted: bool) {
+	ab.set_audio_bus_muted(bus, muted)
+}
+
+// Check if a bus is muted.
+is_audio_bus_muted :: proc(bus: Audio_Bus) -> bool {
+	return ab.is_audio_bus_muted(bus)
+}
+
+// Set the listener position for spatial audio.
+set_audio_listener_position :: proc(position: Vec2) {
+	ab.set_audio_listener_position(position)
+}
+
+// Get the current listener position.
+get_audio_listener_position :: proc() -> Vec2 {
+	return ab.get_audio_listener_position()
+}
+
 //------//
 // MISC //
 //------//
@@ -1635,6 +1792,7 @@ set_internal_state :: proc(state: ^State) {
 	rb = s.render_backend
 	pf.set_internal_state(s.platform_state)
 	rb.set_internal_state(s.render_backend_state)
+	ab.set_internal_state(s.ab_state)
 }
 
 //---------------------//
@@ -1912,6 +2070,9 @@ State :: struct {
 	render_backend_state: rawptr,
 
 	fs: fs.FontContext,
+
+	ab: Audio_Interface,
+	ab_state: rawptr,
 	
 	close_window_requested: bool,
 
@@ -2259,6 +2420,7 @@ pf: Platform_Interface
 
 @(private="file")
 rb: Render_Backend_Interface
+ab: Audio_Interface
 
 // This is here so it can be used from other files in this directory (`s.frame_allocator` can't be
 // reached outside this file).
